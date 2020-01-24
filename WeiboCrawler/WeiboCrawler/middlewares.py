@@ -33,7 +33,6 @@ class RedirectMiddleware(object):
 
     def process_response(self, request, response, spider):
         status = response.status
-        print("status:{}".format(status))
         if status == 302 or status == 403:
             self.account_pool.loc[self.account_pool.username==request.meta['account']['username'],\
                                     'status']='error'

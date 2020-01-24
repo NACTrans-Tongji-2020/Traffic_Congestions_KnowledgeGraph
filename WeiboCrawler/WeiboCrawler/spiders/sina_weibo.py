@@ -24,7 +24,6 @@ class SinaWeiboSpider(Spider):
     
     def parse_tweets(self, response):
         """ Get tweets from specific users. """
-        self.log("response: \n{}".format(response.text))
         if response.url.endswith('page=1'):
             # If it's the first page, get contents from other pages first.
             all_page = re.search(r'/>&nbsp;1/(\d+)页</div>', response.text)
