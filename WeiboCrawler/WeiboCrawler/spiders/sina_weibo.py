@@ -14,13 +14,13 @@ from WeiboCrawler.spiders.utils import time_fix, extract_weibo_content, extract_
 
 class SinaWeiboSpider(Spider):
     name = "sina-weibo"
-    allowed_domains = ["weibo.cn"]
+    start_urls = ['https://weibo.cn/']
 
     def start_requests(self):
         # Define the list consists of user-ids of interests (uoi)
         uoi = ['2901636020']
         for uid in uoi:
-            yield Request(url="https://weibo.cn/%s/profile?page=1" % uid, callback=self.parse_tweets)
+            yield Request("https://weibo.cn/%s/profile?page=1" % uid, callback=self.parse_tweets, dont_filter=True)
     
     def parse_tweets(self, response):
         """ Get tweets from specific users. """

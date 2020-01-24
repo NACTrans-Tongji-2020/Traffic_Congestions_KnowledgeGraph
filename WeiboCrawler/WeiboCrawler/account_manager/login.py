@@ -12,6 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 class WeiboLogin():
     def __init__(self, username, password):
         self.url = 'https://passport.weibo.cn/signin/login?entry=mweibo&r=https://weibo.cn/'
+        #self.browser = webdriver.PhantomJS()
         self.browser = webdriver.Chrome()
         self.browser.set_window_size(1050, 840)
         self.wait = WebDriverWait(self.browser, 20)
@@ -20,7 +21,7 @@ class WeiboLogin():
 
     def open(self):
         """
-        打开网页输入用户名密码并点击
+        Input username, password and submit.
         :return: None
         """
         self.browser.get(self.url)
@@ -33,13 +34,19 @@ class WeiboLogin():
 
     def run(self):
         """
-        破解入口
-        :return:
+        Get cookies.
+        :return: string
         """
         self.open()
         WebDriverWait(self.browser, 30).until(
             EC.visibility_of_element_located(
                 (By.ID, 'app')
+            )
+        )
+        self.browser.get("https://weibo.cn/")
+        WebDriverWait(self.browser, 30).until(
+            EC.visibility_of_element_located(
+                (By.XPATH, '/html/body/div[3]/a[1]')
             )
         )
         cookies = self.browser.get_cookies()
@@ -54,9 +61,9 @@ if __name__ == '__main__':
     # 其实就是把www.xiaohao.fun买的账号复制到新建的account.txt文件中
     root_path = os.path.dirname(os.path.realpath(__file__))
     file_path = root_path + '\\account.txt'
-    db_path = root_path + '\\coockie_db.csv'
-    if "coockie_db.csv" not in os.listdir(root_path):
-        db = pd.DataFrame(columns=('username','password','coockie','status'))
+    db_path = root_path + '\\cookie_db.csv'
+    if "cookie_db.csv" not in os.listdir(root_path):
+        db = pd.DataFrame(columns=('username','password','cookie','status'))
     else:
         db = pd.read_csv(db_path)
     with open(file_path, 'r') as f:
@@ -71,11 +78,11 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
             continue
-        print('获取cookie成功')
+        print('Cookie get!')
         if username in db.username.to_list():
-            db.loc[db.username==username] = pd.DataFrame({"username": [username], "password": [password], "coockie": [cookie_str], "status": ["success"]},sort=False)
+            db.loc[db.username==username] = pd.DataFrame({"username": [username], "password": [password], "cookie": [cookie_str], "status": ["success"]},sort=False)
         else:
-            db = db.append(pd.DataFrame({"username": [username], "password": [password], "coockie": [cookie_str], "status": ["success"]}),sort=False)
-        db.to_csv(db_path,encoding='utf-8',index=False)
-        print('Coockie信息存储成功!')
+            db = db.append(pd.DataFrame({"username": [username], "password": [password], "cookie": [cookie_str], "status": ["success"]}),sort=False)
+    db.to_csv(db_path, encoding='utf-8',index=False)
+    print('Cookies saved!')
 
