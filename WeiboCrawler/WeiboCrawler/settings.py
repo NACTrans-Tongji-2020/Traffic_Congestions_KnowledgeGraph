@@ -56,7 +56,8 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 ITEM_PIPELINES = {
-    'WeiboCrawler.pipelines.WeibocrawlerPipeline': 300,
+    'WeiboCrawler.pipelines.WeiboCrawlerPipeline': 300,
+    'WeiboCrawler.pipelines.WeiboImagesPipeline':400
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -79,3 +80,22 @@ ITEM_PIPELINES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+
+# Settings of MongoDB
+
+LOCAL_HOST = '127.0.0.1'
+LOCAL_PORT = 27017
+DB_NAME = 'Weibo'
+
+# IP Settings
+
+DOWNLOAD_TIMEOUT = 10
+
+RETRY_TIMES = 15
+
+# Images settings
+
+IMAGES_STORE = './WeiboCrawler/data/img'
+IMAGES_URL_FIELD = 'img_url'
+IMAGES_RESULT_FIELD = 'img'

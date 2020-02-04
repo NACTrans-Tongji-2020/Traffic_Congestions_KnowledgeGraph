@@ -67,11 +67,11 @@ class SinaWeiboSpider(Spider):
 
                 images = tweet_node.xpath('.//img[@alt="图片"]/@src')
                 if images:
-                    tweet_item['img_url'] = images[0]
+                    tweet_item['img_url'] = [images[0] if 'http:' in images[0] else ('http:'+images[0])]
 
                 videos = tweet_node.xpath('.//a[contains(@href,"https://m.weibo.cn/s/video/show?object_id=")]/@href')
                 if videos:
-                    tweet_item['vid_url'] = videos[0]
+                    tweet_item['vid_url'] = [videos[0] if 'http:' in videos[0] else ('http:'+videos[0])]
 
                 map_node = tweet_node.xpath('.//a[contains(text(),"显示地图")]')
                 if map_node:
@@ -109,7 +109,7 @@ class SinaWeiboSpider(Spider):
         yield tweet_item
 
 if __name__ == "__main__":
-    os.chdir("H:\\ChocolateDave\\Engineering\\NACTrans2020\\Traffic_Congestions_KnowledgeGraph\\WeiboCrawler\WeiboCrawler")
+    os.chdir("H:\\ChocolateDave\\Engineering\\NACTrans2020\\Traffic_Congestions_KnowledgeGraph\\WeiboCrawlerr")
     process = CrawlerProcess(get_project_settings())
     process.crawl("sina-weibo")
     process.start()
