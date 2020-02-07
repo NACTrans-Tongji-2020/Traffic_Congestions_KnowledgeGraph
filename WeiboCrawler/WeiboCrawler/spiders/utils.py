@@ -19,17 +19,21 @@ def time_fix(time_string):
     if '今天' in time_string:
         return time_string.replace('今天', now_time.strftime('%Y-%m-%d'))
 
-    if '月' in time_string:
+    if '月' in time_string and '年' not in time_string:
         time_string = time_string.replace('月', '-').replace('日', '')
         time_string = str(now_time.year) + '-' + time_string
+        return time_string
+
+    if '月' in time_string and '年' in time_string:
+        time_string = time_string.replace('年','-').replace('月','-').replace('日','-')
         return time_string
 
     return time_string
 
 
-keyword_re = re.compile('<span class="kt">|</span>|原图|<!-- 是否进行翻译 -->|')
+keyword_re = re.compile('<span class="kt">|</span>|<em class=(.*?)>|</em>|<p class=(.*?)>|</p>|原图|<!-- 是否进行翻译 -->')
 emoji_re = re.compile('<img alt="|" src="//h5\.sinaimg(.*?)/>')
-white_space_re = re.compile('<br />')
+white_space_re = re.compile('<br />|\n')
 div_re = re.compile('</div>|<div>')
 image_re = re.compile('<img(.*?)/>')
 url_re = re.compile('<a href=(.*?)>|</a>')
@@ -49,6 +53,8 @@ def extract_weibo_content(weibo_html):
     s = image_re.sub('', s)
     if '<span class="ct">' in s:
         s = s.split('<span class="ct">')[0]
+    if '<i class="wbicon">' in s:
+        s = s.split('<i class="wbicon">')[0]
     s = white_space_re.sub(' ', s)
     s = s.replace('\xa0', '')
     s = s.strip(':')

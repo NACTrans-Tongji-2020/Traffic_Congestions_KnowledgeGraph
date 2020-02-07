@@ -36,9 +36,12 @@ class WeiboCrawlerPipeline(object):
 
 class WeiboImagesPipeline(ImagesPipeline):
     def get_media_requests(self, item, info):
-        for image_url in item['img_url']:
-            # Send image url to Request, download image and add param 'item' to Request.
-            yield Request(image_url, meta={'item':item})
+        try:
+            for image_url in item['img_url']:
+                # Send image url to Request, download image and add param 'item' to Request.
+                yield Request(image_url, meta={'item':item})
+        except Exception:
+            pass
     
     def file_path(self, request, response=None, info=None):
         # Get item from Request and rename folder as image post id
@@ -47,4 +50,4 @@ class WeiboImagesPipeline(ImagesPipeline):
         # Rename image file as img_url
         image_name = request.url.split('/')[-1]
         image_path = u'{0}/{1}'.format(image_folder, image_name)
-        return image_path 
+        return image_path

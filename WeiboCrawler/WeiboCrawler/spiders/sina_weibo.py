@@ -3,17 +3,19 @@
 
 import re
 import time
+from datetime import datetime, timedelta
 from lxml import etree
 from scrapy import Spider
 from scrapy.crawler import CrawlerProcess
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.utils.project import get_project_settings
+from urllib.parse import quote, unquote
 from WeiboCrawler.items import TweetsItem
 from WeiboCrawler.spiders.utils import time_fix, extract_weibo_content, extract_comment_content
 
-class SinaWeiboSpider(Spider):
-    name = "sina-weibo"
+class WeiboCNSpider(Spider):
+    name = "weibo-cn"
     start_urls = ['https://weibo.cn/']
 
     def start_requests(self):
@@ -23,24 +25,24 @@ class SinaWeiboSpider(Spider):
             yield Request("https://weibo.cn/%s/profile?page=1" % uid, callback=self.parse_tweets, dont_filter=True)
     
     def parse_tweets(self, response):
-        """ Get tweets from specific users. """
+        """ Get tweets from specific pages. """
         if response.url.endswith('page=1'):
-            # If it's the first page, get contents from other pages first.
+            # If it's the first page, recursively get contents from other pages first.
             all_page = re.search(r'/>&nbsp;1/(\d+)页</div>', response.text)
             if all_page:
                 all_page = int(all_page.group(1))
                 self.log("Total page: {}".format(all_page))
                 for page in range(2, all_page+1):
                     page_url = response.url.replace('page=1','page={}'.format(page))
-                    yield Request(page_url, self.parse_tweets, dont_filter=True, meta=response.meta)
+                    yield Request(page_url, self.parse_tweets,  meta=response.meta)
         
-        """ Decoding current page data """
+        """ Decode and save current page data """
         tree_node = etree.HTML(response.body)
         tweet_nodes = tree_node.xpath('//div[@class="c" and @id]')
         for tweet_node in tweet_nodes:
             try:
                 tweet_item = TweetsItem()
-                tweet_item['crawl_time'] = int(time.time())
+                tweet_item['crawl_time'] = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
                 tweet_repost_url = tweet_node.xpath('.//a[contains(text(),"转发[")]/@href')[0]
                 user_tweet_id = re.search(r'/repost/(.*?)\?uid=(\d+)', tweet_repost_url)
                 tweet_item['weibo_url'] = 'https://weibo.com/{}/{}'.format(user_tweet_id.group(2),
@@ -108,8 +110,112 @@ class SinaWeiboSpider(Spider):
         tweet_item['content'] = extract_weibo_content(tweet_html)
         yield tweet_item
 
+class SWeiboSpider(Spider):
+    name = "s-weibo"
+    start_urls = ['https://s.weibo.com/']
+
+    def getdate(self, begin, days):
+        """ Get date list with begin date (format: %Y-%m-%d) and range of days. """
+        fmt = '%Y-%m-%d'
+        date = [(datetime.strptime(begin, fmt)+timedelta(days=i)).strftime(fmt) \
+                        for i in range(days)]
+        return date
+
+    def start_requests(self):
+        """ Modify keywords if needed. """
+        keywords = ['路况']
+        date_list = self.getdate('2016-12-01', 31)
+        hours = range(23)
+        for key in keywords:
+            for date in date_list:
+                for hour in hours:
+                    url = 'https://s.weibo.com/weibo?q=%s&region=custom:44:3&typeall=1&suball=1&timescope=custom:%s&Refer=g&page=1'
+                    timescope = '%s-%d:%s-%d' % (date,hour,date,hour+1)
+                    yield Request(url % (quote(key),timescope), callback=self.parse_tweets, dont_filter=True)
+    
+    def parse_tweets(self, response):
+        tree_node = etree.HTML(response.body)
+        tweet_item = TweetsItem()
+        """ If no results, continue. """
+        if tree_node.xpath('//*[contains(@class, "no-result")]'):
+            self.logger.info("Page %s has no results." % response.url)
+            return tweet_item
+        """ Get tweets from specific pages. """
+        if response.url.endswith('page=1'):
+            # If it's the first page, recursively get contents from other pages first.
+            all_page_urls = tree_node.xpath('//*[@class="m-page"]/div/span/ul/li/a/@href')
+            if len(all_page_urls)>1:
+                for page_url in all_page_urls[1: ]:
+                    yield Request('https://s.weibo.com'+ page_url, self.parse_tweets,  meta=response.meta)
+        
+        """ Decode and save current page data """
+        tweet_nodes = tree_node.xpath('//*[@class="card"]')
+        for tweet_node in tweet_nodes:
+            try:
+                tweet_item['crawl_time'] = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+                tweet_url = tweet_node.xpath('.//div[@class="content"]/p[@class="from"]/a[1]/@href')[0]
+                tweet_ids = re.search(r'com/(\d+)/(.*?)\?', tweet_url)
+                tweet_item['weibo_url'] = 'https://weibo.com/{}/{}'.format(tweet_ids.group(1),
+                                                                           tweet_ids.group(2))
+                tweet_item['user_id'] = tweet_ids.group(1)
+                tweet_item['_id'] = tweet_ids.group(2)
+                feed_time = tweet_node.xpath('string(.//div[@class="content"]/p[@class="from"]/a[1]/text())')
+                feed_platform = tweet_node.xpath('string(.//div[@class="content"]/p[@class="from"]/a[2])')
+                if feed_time and feed_platform:
+                    tweet_item['post_time'] = time_fix(feed_time.strip()).replace(' ','')
+                    tweet_item['platform'] = feed_platform.strip().replace(' ','')
+
+                like_num = tweet_node.xpath('string(.//div[@class="card-act"]//li[4]//em/text())')
+                if like_num:
+                    tweet_item['like_num'] = int(re.search('\d+', like_num).group())
+                else:
+                    tweet_item['like_num'] = 0
+
+                repost_num =  re.search('\d+',tweet_node.xpath('string(.//div[@class="card-act"]//li[2]/a/text())'))
+                if repost_num:
+                    tweet_item['repost_num'] = int(repost_num.group())
+                else:
+                    tweet_item['repost_num'] = 0
+
+                comment_num = re.search('\d+', tweet_node.xpath('string(.//div[@class="card-act"]//li[3]/a/text())'))
+                if comment_num:
+                    tweet_item['comment_num'] =  int(comment_num.group())
+                else:
+                    tweet_item['comment_num'] = 0
+
+                images = tweet_node.xpath('.//div[@class="content"]/div[contains(@node-type,"media")]//img[contains(@action-type,"pic")]/@src')
+                if images:
+                    imgs =[]
+                    for img in images:
+                        imgs.append(img if 'http:' in img else ('http:'+img))
+                    tweet_item['img_url'] = imgs
+
+                video = tweet_node.xpath('.//div[@class="content"]/div[contains(@node-type,"media")]//a[contains(@node-type,"video")]/@action-data')
+                if video:
+                    vid = unquote(re.search(r'full_url=(.*?)\&', video[0]).group(1))
+                    tweet_item['vid_url'] = [vid if 'http:' in vid else ('http:'+vid)]
+
+                repost_node = tweet_node.xpath('.//div[@class="card-comment"]//div[@class="func"]/p[@class="from"]/a[1]/@href')
+                if repost_node:
+                    tweet_item['ori_weibo'] = [repost_node[0] if 'http:' in repost_node[0] else ('http:'+repost_node[0])]
+
+                # Check if has read full text
+                all_content = tweet_node.xpath('.//*[@class="content"]/p[@node-type="feed_list_content_full"]')
+                if all_content:
+                    content_html = etree.tostring(all_content[0], encoding='unicode')
+                    tweet_item['content'] = extract_weibo_content(content_html)
+                    yield tweet_item
+
+                else:
+                    content_node = tweet_node.xpath('.//*[@class="content"]/p[@node-type="feed_list_content"]')
+                    tweet_html = etree.tostring(content_node[0], encoding='unicode')
+                    tweet_item['content'] = extract_weibo_content(tweet_html)
+                    yield tweet_item
+
+            except Exception as e:
+                self.logger.error(e)
+
 if __name__ == "__main__":
-    os.chdir("H:\\ChocolateDave\\Engineering\\NACTrans2020\\Traffic_Congestions_KnowledgeGraph\\WeiboCrawlerr")
     process = CrawlerProcess(get_project_settings())
-    process.crawl("sina-weibo")
+    process.crawl("s-weibo")
     process.start()

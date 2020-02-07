@@ -5,8 +5,10 @@ BOT_NAME = 'WeiboCrawler'
 SPIDER_MODULES = ['WeiboCrawler.spiders']
 NEWSPIDER_MODULE = 'WeiboCrawler.spiders'
 
+# Configurations for logging
 #LOG_FILE = "WeiboCrawler.log"
-#LOG_LEVEL = "INFO"
+LOG_LEVEL = "INFO"
+
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
 
