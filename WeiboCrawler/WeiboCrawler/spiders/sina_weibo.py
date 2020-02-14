@@ -123,14 +123,15 @@ class SWeiboSpider(Spider):
 
     def start_requests(self):
         """ Modify keywords if needed. """
-        keywords = ['路况']
-        date_list = self.getdate('2016-12-01', 31)
+        keywords = ['路况', '深圳天气','深圳交通管制']
+        date_list = self.getdate('2016-12-19', 7)
         hours = range(23)
         for key in keywords:
             for date in date_list:
                 for hour in hours:
                     url = 'https://s.weibo.com/weibo?q=%s&region=custom:44:3&typeall=1&suball=1&timescope=custom:%s&Refer=g&page=1'
                     timescope = '%s-%d:%s-%d' % (date,hour,date,hour+1)
+                    self.keyword = key
                     yield Request(url % (quote(key),timescope), callback=self.parse_tweets, dont_filter=True)
     
     def parse_tweets(self, response):
@@ -152,6 +153,7 @@ class SWeiboSpider(Spider):
         tweet_nodes = tree_node.xpath('//*[@class="card"]')
         for tweet_node in tweet_nodes:
             try:
+                tweet_item['key_word'] = self.keyword
                 tweet_item['crawl_time'] = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
                 tweet_url = tweet_node.xpath('.//div[@class="content"]/p[@class="from"]/a[1]/@href')[0]
                 tweet_ids = re.search(r'com/(\d+)/(.*?)\?', tweet_url)
