@@ -20,3 +20,4 @@ class TweetsItem(Item):
     ori_weibo = Field()  # Original Weibo for reposted one
     loc_info = Field()   # Location information
     crawl_time = Field() # Crawled time
+    key_word = Field() # Keyword used for searching
