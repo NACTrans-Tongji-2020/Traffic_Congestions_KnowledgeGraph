@@ -7,7 +7,9 @@ import pymongo
 from pymongo.errors import DuplicateKeyError
 import os
 import time
+from scrapy import Request
 from scrapy.exceptions import DropItem
+from scrapy.exporters import CsvItemExporter
 from scrapy.pipelines.images import ImagesPipeline
 from WeiboCrawler.items import TweetsItem
 from WeiboCrawler.settings import LOCAL_HOST, LOCAL_PORT, DB_NAME
@@ -71,38 +73,30 @@ class WeiboCsvPipeline(object):
     def __init__(self):
         root_path = os.path.dirname(os.path.realpath(__file__))
         db_path = root_path + "\\data\\tweets.csv"
-        self.db = open(db_path,'w+')
-        self.writer = csv.writer(self.db)
+        self.db = open(db_path,'wb')
+        self.exporter = CsvItemExporter(self.db,encoding='utf-8-sig')
+    
+    def create_valid_csv(self, item):
+        for key, value in item.items():
+            if isinstance(value, str):
+                if  "," in value:
+                    item[key] = "\"" + value + "\""
+        return item
         
     def process_item(self, item, spider):
         if item['_id']:
-            self.writer.writerow((
-                item['_id'],
-                item['weibo_url'],
-                item['post_time'],
-                item['like_num'],
-                item['repost_num'],
-                item['comment_num'],
-                item['content'].encode('utf8','ignore'),
-                item['user_id'],
-                item['platform'].encode('utf8','ignore'),
-                item['img_url'],
-                item['vid_url'],
-                item['ori_weibo'],
-                item['loc_info'],
-                item['crawl_time'],
-                item['key_word'].encode('utf8','ignore')
-            ))
-            self.count += 1
+            item = self.create_valid_csv(item)
+            self.exporter.export_item(item)
             return item
         else:
             raise DropItem("Invalid record")
 
     def open_spider(self, spider):
-        self.db.close()
+        self.exporter.start_exporting()
         print("***************Crawler {} initiated***************".format(spider.name))
 
     def close_spider(self, spider):
+        self.exporter.finish_exporting()
         self.db.close()
         print("***************Crawler {} terminated***************".format(spider.name))   
 
