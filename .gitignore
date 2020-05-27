@@ -1,0 +1,13 @@
+
+*.jpg
+*.pyc
+*.bin
+Prediction/data/cifar-10-batches-py/data.ipynb
+Prediction/data/cifar-10-batches-py/data_batch_1
+Prediction/data/cifar-10-batches-py/data_batch_2
+Prediction/data/cifar-10-batches-py/data_batch_3
+Prediction/data/cifar-10-batches-py/data_batch_4
+Prediction/data/cifar-10-batches-py/data_batch_5
+Prediction/data/cifar-10-batches-py/readme.html
+Prediction/data/cifar-10-batches-py/batches.meta
+Prediction/data/cifar-10-batches-py/test_batch
