@@ -11,3 +11,8 @@ Prediction/data/cifar-10-batches-py/data_batch_5
 Prediction/data/cifar-10-batches-py/readme.html
 Prediction/data/cifar-10-batches-py/batches.meta
 Prediction/data/cifar-10-batches-py/test_batch
+Prediction/data/fcd-bh/data_batch_1
+Prediction/data/fcd-bh/data_batch_2
+Prediction/data/fcd-bh/data_batch_3
+Prediction/data/fcd-bh/data_batch_4
+Prediction/data/fcd-bh/test_batch

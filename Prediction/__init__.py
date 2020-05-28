@@ -1,5 +1,5 @@
 from . import brain
 from . import cfg
-from . import cifar
+from . import preprocessing
 
-__all__ = ['brain', 'cfg', 'cifar']
+__all__ = ['brain', 'cfg', 'preprocessing']

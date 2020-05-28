@@ -40,6 +40,8 @@ class NNet(nn.Module):
         # Store outputs of each layer classify in accordance with layer types
         c_list, h_list = [], []
         # Gated (Add bias using padding in each layer)
+        ## Cast input to float type
+        x = x.float()
         ## Conv1
         x = self.padding(x)
         c_list.append(torch.mean(x, 0, True))
@@ -165,19 +167,19 @@ class Agent(object):
                 if cnn:
                     _,_,H,W = x.shape
                     F, _, HH, WW = w.shape
-                    s = stride
+                    S = stride
                     # output shape
                     Ho = int(1 + (H-HH)/S)
                     Wo = int(1 + (W - WW)/S)
                     for i in range(Ho):
                         for j in range(Wo):
                             # flatten the high-dimensional input
-                            r = x[:,:, i*s:i*s+HH, j*s:j*s+WW].contiguous().view(1, -1)
+                            r = x[:,:, i*S:i*S+HH, j*S:j*S+WW].contiguous().view(1, -1)
                             k = torch.mm(p, torch.t(r))
                             p.sub_(torch.mm(k, torch.t(k)) / (alpha + torch.mm(r, k)))
                     # update weight gradient with p matrix
                     w.grad.data = torch.mm(w.grad.data.view(F, -1), torch.t(p.data)).view_as(w)
-                # For fully connected layer
+                # For linear layers
                 else:
                     r = x
                     k = torch.mm(p, torch.t(r))
@@ -188,11 +190,11 @@ class Agent(object):
             for n, w in self.model.named_parameters():
                 # modify weight in each layer
                 if n=='c1.weight':
-                    weight_modification(self.Pc1, c_list[0], w, alpha=alpha_list[0], stride=2)
+                    weight_modification(self.Pc1, c_list[0], w, alpha=alpha_list[0], stride=1)
                 if n=='c2.weight':
-                    weight_modification(self.Pc2, c_list[1], w, alpha=alpha_list[0], stride=2)
+                    weight_modification(self.Pc2, c_list[1], w, alpha=alpha_list[0], stride=1)
                 if n=='c3.weight':
-                    weight_modification(self.Pc3, c_list[2], w, alpha=alpha_list[0], stride=2)
+                    weight_modification(self.Pc3, c_list[2], w, alpha=alpha_list[0], stride=1)
                 if n=='f1.weight':
                     weight_modification(self.P1, h_list[0], w, alpha=alpha_list[1], cnn=False)
                 if n=='f2.weight':
@@ -238,11 +240,10 @@ class Agent(object):
             total_num += len(b)
         return total_loss/total_num, total_acc/total_num
     
-    def run(self, t, xtrain, ytrain, xeval, yeval, writer=None):
+    def run(self, xtrain, ytrain, xeval, yeval, writer=None):
         r"""
         Main function of the training agent.
         :params
-            t (int): serial number of tasks.
             xtrain (tensor): training datasets.
             ytrain (tensor): training targets.
             xeval (tensor): evaluation datasets.
@@ -251,23 +252,22 @@ class Agent(object):
         """
         best_loss, best_acc = np.inf, 0.
         # loop epchos and train
-        try:
-            for e in range(self.n_epochs):
-                # Train
-                self.train(xtrain, ytrain, cur_epoch=e, n_epochs=self.n_epochs)
-                loss_t, acc_t = self.eval(xtrain, ytrain)
-                print('# | Epoch {:d}/{:d} | Train: loss={:3f}, acc={:2.2f}%'.format(
-                                e+1, self.n_epochs, loss_t, 100*acc_t))
-                # Evaluation
-                loss_e, acc_e = self.eval(xeval, yeval)
-                print('# Evaluation: loss={:3f}, acc={:2.2f}%\n'.format(loss_e, 100*acc_e), end='')
-                if writer:
-                    writer.add_scalar("Train/loss", loss_t, e)
-                    writer.add_scalar("Train/accuracy", 100*acc_t, e)
-                    writer.add_scalar("Eval/loss",loss_e, e)
-                    writer.add_scalar("Eval/accuracy", 100*acc_e, e)
-                if e % self.eval_freq == 0:
-                    torch.save({'epoch': e+1, 'state_dict':self.model.state_dict()}, './model/{:s}-{:d}.pth'.format(time.time(), e+1))
-        except Exception as e:
-            print(e)
-        return
+        for e in range(self.n_epochs):
+            # Train
+            self.train(xtrain, ytrain, cur_epoch=e, n_epochs=self.n_epochs)
+            loss_t, acc_t = self.eval(xtrain, ytrain)
+            print('# | Epoch {:d}/{:d} | Train: loss={:3f}, acc={:2.2f}%'.format(
+                            e+1, self.n_epochs, loss_t, 100*acc_t))
+            # Evaluation
+            loss_e, acc_e = self.eval(xeval, yeval)
+            print('# | Evaluation | loss={:3f}, acc={:2.2f}%\n'.format(loss_e, 100*acc_e), end='')
+            if writer:
+                writer.add_scalar("Train/loss", loss_t, e)
+                writer.add_scalar("Train/accuracy", 100*acc_t, e)
+                writer.add_scalar("Eval/loss",loss_e, e)
+                writer.add_scalar("Eval/accuracy", 100*acc_e, e)
+            if e % self.eval_freq == 0:
+                torch.save({'epoch': e+1, 'state_dict':self.model.state_dict()}, './model/{:s}-{:d}.pth'.format(time.time(), e+1))
+#        except Exception as e:
+#            print(e)
+            return
